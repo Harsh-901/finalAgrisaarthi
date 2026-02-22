@@ -58,7 +58,7 @@ class EligibleSchemesView(APIView):
                 'deadline': str(scheme.deadline) if scheme.deadline else None,
                 'can_apply': eligibility['has_all_documents'],
                 'missing_documents': eligibility['missing_documents'],
-                'portal_url': getattr(scheme, 'portal_url', None) or 'https://dummyscheme.netlify.app'
+                'portal_url': 'https://dummyscheme.netlify.app'
             })
         
         return Response({
