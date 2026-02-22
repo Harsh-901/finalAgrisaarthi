@@ -19,6 +19,7 @@ import '../../features/documents/screens/document_upload_screen.dart';
 import '../../features/applications/screens/applications_screen.dart';
 import '../../features/schemes/screens/manage_schemes_screen.dart';
 import '../../features/claims/screens/insurance_claim_screen.dart';
+import '../../features/autofill/screens/scheme_webview_screen.dart';
 
 class AppRouter {
   static const String splash = '/';
@@ -35,6 +36,7 @@ class AppRouter {
   static const String insuranceClaim = '/insurance-claim';
   static const String adminApplicationView = '/admin-application-view';
   static const String adminAllApplications = '/admin-all-applications';
+  static const String schemeWebView = '/scheme-webview';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -110,6 +112,18 @@ class AppRouter {
         path: adminAllApplications,
         name: 'adminAllApplications',
         builder: (context, state) => const AdminAllApplicationsScreen(),
+      ),
+      GoRoute(
+        path: schemeWebView,
+        name: 'schemeWebView',
+        builder: (context, state) {
+          final params = state.uri.queryParameters;
+          return SchemeWebViewScreen(
+            schemeId: params['schemeId'] ?? '',
+            schemeName: params['schemeName'] ?? 'Scheme',
+            portalUrl: params['portalUrl'] ?? 'https://dummyscheme.netlify.app',
+          );
+        },
       ),
     ],
   );

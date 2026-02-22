@@ -15,6 +15,11 @@ class SchemeModel {
   final String? description;
   final bool isApplied;
 
+  /// Government portal URL for this scheme (used by AutoFill WebView)
+  final String portalUrl;
+
+  static const String _defaultPortalUrl = 'https://dummyscheme.netlify.app';
+
   SchemeModel({
     required this.id,
     required this.name,
@@ -23,6 +28,7 @@ class SchemeModel {
     required this.status,
     this.description,
     this.isApplied = false,
+    this.portalUrl = _defaultPortalUrl,
   });
 
   factory SchemeModel.fromJson(Map<String, dynamic> json) {
@@ -41,7 +47,6 @@ class SchemeModel {
     return SchemeModel(
       id: json['id']?.toString() ?? json['scheme_id']?.toString() ?? '',
       name: json['name'] ?? json['name_localized'] ?? 'Unknown Scheme',
-      // Map 'benefit' or 'description' from DB
       benefit: json['benefit'] ??
           json['benefit_display'] ??
           json['description'] ??
@@ -49,6 +54,8 @@ class SchemeModel {
       deadline: json['deadline'] ?? 'Ongoing',
       status: status,
       description: json['description'],
+      portalUrl:
+          json['portal_url']?.toString() ?? SchemeModel._defaultPortalUrl,
     );
   }
 
@@ -60,6 +67,7 @@ class SchemeModel {
     SchemeStatus? status,
     String? description,
     bool? isApplied,
+    String? portalUrl,
   }) {
     return SchemeModel(
       id: id ?? this.id,
@@ -69,6 +77,7 @@ class SchemeModel {
       status: status ?? this.status,
       description: description ?? this.description,
       isApplied: isApplied ?? this.isApplied,
+      portalUrl: portalUrl ?? this.portalUrl,
     );
   }
 }

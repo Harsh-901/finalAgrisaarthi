@@ -57,7 +57,8 @@ class EligibleSchemesView(APIView):
                 'benefit_display': f"₹{float(scheme.benefit_amount):,.2f}",
                 'deadline': str(scheme.deadline) if scheme.deadline else None,
                 'can_apply': eligibility['has_all_documents'],
-                'missing_documents': eligibility['missing_documents']
+                'missing_documents': eligibility['missing_documents'],
+                'portal_url': getattr(scheme, 'portal_url', None) or 'https://dummyscheme.netlify.app'
             })
         
         return Response({

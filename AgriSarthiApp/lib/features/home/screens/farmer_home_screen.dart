@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -124,7 +124,8 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
   }
 
   /// Load schemes and mark which ones the farmer already applied for
-  Future<List<SchemeModel>> _loadSchemesWithAppliedStatus(String languageCode) async {
+  Future<List<SchemeModel>> _loadSchemesWithAppliedStatus(
+      String languageCode) async {
     final results = await Future.wait([
       _schemeService.getEligibleSchemes(languageCode: languageCode),
       _fetchAppliedSchemeIds(),
@@ -137,7 +138,8 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
     }
 
     return schemes.map((s) {
-      final isApplied = appliedIds.contains(s.id) || appliedIds.contains(s.name);
+      final isApplied =
+          appliedIds.contains(s.id) || appliedIds.contains(s.name);
       return s.copyWith(isApplied: isApplied);
     }).toList();
   }
@@ -200,50 +202,35 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
     }
   }
 
-  Future<void> _applyForScheme(SchemeModel scheme) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Apply for ${scheme.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Would you like to apply for this scheme?',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            if (scheme.benefit.isNotEmpty)
-              Text(
-                'Benefit: ${scheme.benefit}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.success,
-                    ),
-              ),
-          ],
+  // ─── AUTO FILL: opens scheme portal WebView and runs 5-phase pipeline ───────
+
+  Future<void> _autoFillScheme(SchemeModel scheme) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.isDjangoAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Cannot connect to server. Please check your IP/Network.'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Apply Now'),
-          ),
-        ],
-      ),
+      );
+      return;
+    }
+
+    // Navigate to the WebView screen – all pipeline logic lives there
+    if (!mounted) return;
+    context.push(
+      '${AppRouter.schemeWebView}'
+      '?schemeId=${Uri.encodeComponent(scheme.id)}'
+      '&schemeName=${Uri.encodeComponent(scheme.name)}'
+      '&portalUrl=${Uri.encodeComponent(scheme.portalUrl)}',
     );
+  }
 
-    if (confirmed != true || !mounted) return;
+  // ─── QUICK APPLY: one-step apply (Apply → button) ─────────────────────────
 
+  Future<void> _quickApplyScheme(SchemeModel scheme) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     if (!authProvider.isDjangoAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -286,19 +273,14 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
 
     if (result['success'] == true) {
       final trackingId = result['data']?['tracking_id'] ?? '';
-      // Refresh schemes list (will re-fetch applied IDs too)
-      if (mounted) {
-        setState(() {
-          _schemesFuture = _loadSchemesWithAppliedStatus(
-              _currentLocale?.languageCode ?? 'en');
-        });
-      }
+      setState(() {
+        _schemesFuture =
+            _loadSchemesWithAppliedStatus(_currentLocale?.languageCode ?? 'en');
+      });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Application submitted! Tracking ID: $trackingId',
-          ),
+          content: Text('Application submitted! Tracking ID: $trackingId'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 4),
@@ -447,8 +429,7 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
               ),
               // Notification bell
               IconButton(
-                onPressed: () =>
-                    _showComingSoon('features.notifications'.tr()),
+                onPressed: () => _showComingSoon('features.notifications'.tr()),
                 icon: const Icon(Icons.notifications_outlined),
                 color: Colors.white,
                 style: IconButton.styleFrom(
@@ -489,7 +470,8 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
               ),
               // Overflow menu
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.white, size: 20),
+                icon:
+                    const Icon(Icons.more_vert, color: Colors.white, size: 20),
                 onSelected: (value) async {
                   if (value == 'logout') {
                     final confirm = await showDialog<bool>(
@@ -912,32 +894,63 @@ class _FarmerHomeScreenState extends State<FarmerHomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    // Bottom row: click to see details + Apply
+                    // Bottom row: Auto Fill | Apply
                     Row(
                       children: [
-                        Text(
-                          'Click to see details',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
+                        // Auto Fill – triggers backend AutoFillService
+                        OutlinedButton(
+                          onPressed: scheme.isApplied
+                              ? null
+                              : () => _autoFillScheme(scheme),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1A237E),
+                            side: BorderSide(
+                              color: scheme.isApplied
+                                  ? Colors.grey.shade400
+                                  : const Color(0xFF1A237E),
+                              width: 1.2,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 6),
+                            minimumSize: const Size(0, 32),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Auto Fill',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         const Spacer(),
+                        // Apply – quick one-step submit
                         GestureDetector(
-                          onTap: () => _applyForScheme(scheme),
-                          child: const Row(
+                          onTap: scheme.isApplied
+                              ? null
+                              : () => _quickApplyScheme(scheme),
+                          child: Row(
                             children: [
                               Text(
                                 'Apply',
                                 style: TextStyle(
-                                  color: Color(0xFFFF8F00),
+                                  color: scheme.isApplied
+                                      ? Colors.grey.shade400
+                                      : const Color(0xFFFF8F00),
                                   fontWeight: FontWeight.w700,
                                   fontSize: 14,
                                 ),
                               ),
-                              SizedBox(width: 4),
-                              Icon(Icons.arrow_forward,
-                                  color: Color(0xFFFF8F00), size: 16),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward,
+                                color: scheme.isApplied
+                                    ? Colors.grey.shade400
+                                    : const Color(0xFFFF8F00),
+                                size: 16,
+                              ),
                             ],
                           ),
                         ),
